@@ -1,0 +1,55 @@
+<html>
+    <head>
+        <script language="JavaScript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.2.1/math.js"></script>
+        <style>
+            body {
+                margin:0;
+                padding:0;
+            }
+        </style>
+
+    </head>
+    <body onresize="render()">
+        <canvas
+            id="canvas"
+            width="1000"
+            height="500"
+            onwheel="zoom(event.deltaY, camera)"
+            onMouseDown = "startPivot(event)"
+            onMouseMove = "pivoting(event)"
+            onMouseUp = "endPivot(event)"
+        >
+        </canvas>
+
+        <input type="file" name="file" id="file">
+
+        <script src="src/js/3dMath.js"></script>
+        <script src="src/js/index.js"></script>
+        <script src="src/js/rayTracer.js"></script>
+        <script type="text/javascript">
+            document.getElementById('file').onchange = function(){
+
+            var file = this.files[0];
+
+            var reader = new FileReader();
+            reader.onload = function(progressEvent){
+            // Entire file
+            //console.log(this.result.split(' '));
+
+            // By lines
+            var lines = this.result.split('\n');
+            for(var line = 0; line < lines.length; line++){
+                let lineObj = lines[line].split(' ')
+                if(lineObj[0] == 'v') {
+                    vertices.push([parseFloat(lineObj[4])*100, parseFloat(lineObj[2])*100, parseFloat(lineObj[3])*100])
+                }
+                //console.log(lines[line].split(' ').map((el) => {return parseFloat(el)}));
+            }
+            //console.log(vertices)
+            render();
+            };
+            reader.readAsText(file);
+            };
+        </script>
+    </body>
+</html>
