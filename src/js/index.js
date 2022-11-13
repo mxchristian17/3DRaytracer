@@ -1,4 +1,5 @@
 const canvas = document.getElementById("canvas")
+const loading = document.getElementById("loading")
 let canvasWidth = 700//window.innerWidth
 let canvasHeight = 500//window.innerHeight
 const context = canvas.getContext("2d") // create context
@@ -431,7 +432,11 @@ const drawPixel = (canvasData, canvasWidth, canvasHeight, pixel, r,g,b,a) => {
     canvasData.data[index + 3] = a;
 }
 
+loading.style.display = "block"
+canvas.style.display = "none"
 function render() {
+    let showLoading = true
+    let loadingValue = 0
     const cam = new Camera(camera)
     const pinturaRoja = new Material({ r:255, g:0, b:0, a:255 })
     const pinturaAzul = new Material({ r:0, g:0, b:255, a:255 })
@@ -506,7 +511,6 @@ function render() {
         })
     })
     context.putImageData(canvasData, 0, 0);
-
+    canvas.style.display = "block"
+    loading.style.display = "none"
 }
-
-render()
