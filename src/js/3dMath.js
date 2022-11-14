@@ -13,3 +13,4 @@ const normalizeVector = (v) => {
     v.forEach((e) => {retVal.push( e / length )})
     return retVal
 }
+
