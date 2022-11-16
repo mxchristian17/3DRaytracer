@@ -9,7 +9,7 @@
         </style>
 
     </head>
-    <body onresize="render()" onload="render()">
+    <body onresize="render(polygons, lights)" onload="render(polygons, lights)">
         <div id="loading">Loading...</div>
         <canvas
             id="canvas"
@@ -27,6 +27,7 @@
         <script src="src/js/3dMath.js"></script>
         <script src="src/js/index.js"></script>
         <script src="src/js/rayTracer.js"></script>
+        <script src="src/js/scene.js"></script>
         <script type="text/javascript">
             document.getElementById('file').onchange = function(){
 

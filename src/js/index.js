@@ -187,15 +187,15 @@ class polygon {
     }
 
     color (rays) {
-        let angle
+        let angleCos
         let r=0
         let g=0
         let b=0
         rays.forEach((ray) => {
-            angle = this.normal().angleBetween(ray.direction())
-            r += Math.abs(Math.cos(degreeToRad(angle))) * ray.intensity * 255 * ((this.material.color.r / 255) + this.material.ior * (ray.color.r / 255))
-            g += Math.abs(Math.cos(degreeToRad(angle))) * ray.intensity * 255 * ((this.material.color.g / 255) + this.material.ior * (ray.color.g / 255))
-            b += Math.abs(Math.cos(degreeToRad(angle))) * ray.intensity * 255 * ((this.material.color.b / 255) + this.material.ior * (ray.color.b / 255))
+            angleCos = Math.abs(Math.cos(degreeToRad(this.normal().angleBetween(ray.direction()))))
+            r += angleCos * ray.intensity * (this.material.color.r * (1- this.material.ior)) * (ray.color.r / 255)
+            g += angleCos * ray.intensity * (this.material.color.g * (1- this.material.ior)) * (ray.color.g / 255)
+            b += angleCos * ray.intensity * (this.material.color.b * (1- this.material.ior)) * (ray.color.b / 255)
         })
         r = r >255 ? 255 : r
         g = g >255 ? 255 : g
@@ -468,76 +468,15 @@ const drawPixel = (canvasData, canvasWidth, canvasHeight, pixel, r,g,b,a) => {
 
 loading.style.display = "block"
 //canvas.style.display = "none"
-function render() {
+function render(polygons, lights) {
     const startingTime = new Date().getTime();
     let showLoading = true
     let loadingValue = 0
     const cam = new Camera(camera)
-    const pinturaRoja = new Material({ r:255, g:0, b:0, a:255 }, 0.2)
-    const pinturaAzul = new Material({ r:0, g:0, b:255, a:255 }, 0.2)
-    const pinturaVerde = new Material({ r:0, g:255, b:0, a:255 }, 0.2)
-    const pinturaBlanca = new Material({ r:255, g:255, b:255, a:255 }, 0.2)
     const cameraToWorld = cam.cameraToWorldSet()
-    let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, n, closestPoli, closestCamRay, closestPoliB, closestLightRay
+    let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, n, closestPoli, closestCamRay, closestPoliB, closestLightRay, interference, closestIntersect, opositeTempRay
     let pix = []
     let hitRays = []
-    let polygons = [
-        new polygon([{x:0,y:1,z:0}, {x:1,y:1,z:0}, {x:1,y:0,z:0}], pinturaRoja),
-        new polygon([{x:0,y:0,z:0}, {x:0,y:1,z:0}, {x:1,y:0,z:0}], pinturaRoja),
-        new polygon([{x:0,y:0,z:0}, {x:0,y:0,z:1}, {x:1,y:0,z:0}], pinturaRoja),
-        new polygon([{x:0,y:0,z:1}, {x:1,y:0,z:1}, {x:1,y:0,z:0}], pinturaRoja),
-        new polygon([{x:0,y:0,z:0}, {x:0,y:1,z:0}, {x:0,y:0,z:1}], pinturaRoja),
-        new polygon([{x:0,y:0,z:1}, {x:0,y:1,z:0}, {x:0,y:1,z:1}], pinturaRoja),
-        new polygon([{x:0,y:1,z:1}, {x:0,y:1,z:0}, {x:1,y:1,z:0}], pinturaRoja),
-        new polygon([{x:1,y:1,z:0}, {x:1,y:1,z:1}, {x:0,y:1,z:1}], pinturaRoja),
-        new polygon([{x:1,y:0,z:0}, {x:1,y:1,z:0}, {x:1,y:0,z:1}], pinturaRoja),
-        new polygon([{x:1,y:0,z:1}, {x:1,y:1,z:1}, {x:1,y:1,z:0}], pinturaRoja),
-        new polygon([{x:0,y:0,z:1}, {x:1,y:0,z:1}, {x:1,y:1,z:1}], pinturaRoja),
-        new polygon([{x:0,y:0,z:1}, {x:1,y:1,z:1}, {x:0,y:1,z:1}], pinturaRoja),
-
-        new polygon([{x:0+5,y:1+5,z:0}, {x:1+5,y:1+5,z:0}, {x:1+5,y:0+5,z:0}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:0}, {x:0+5,y:1+5,z:0}, {x:1+5,y:0+5,z:0}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:0}, {x:0+5,y:0+5,z:1}, {x:1+5,y:0+5,z:0}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:1}, {x:1+5,y:0+5,z:1}, {x:1+5,y:0+5,z:0}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:0}, {x:0+5,y:1+5,z:0}, {x:0+5,y:0+5,z:1}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:1}, {x:0+5,y:1+5,z:0}, {x:0+5,y:1+5,z:1}], pinturaAzul),
-        new polygon([{x:0+5,y:1+5,z:1}, {x:0+5,y:1+5,z:0}, {x:1+5,y:1+5,z:0}], pinturaAzul),
-        new polygon([{x:1+5,y:1+5,z:0}, {x:1+5,y:1+5,z:1}, {x:0+5,y:1+5,z:1}], pinturaAzul),
-        new polygon([{x:1+5,y:0+5,z:0}, {x:1+5,y:1+5,z:0}, {x:1+5,y:0+5,z:1}], pinturaAzul),
-        new polygon([{x:1+5,y:0+5,z:1}, {x:1+5,y:1+5,z:1}, {x:1+5,y:1+5,z:0}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:1}, {x:1+5,y:0+5,z:1}, {x:1+5,y:1+5,z:1}], pinturaAzul),
-        new polygon([{x:0+5,y:0+5,z:1}, {x:1+5,y:1+5,z:1}, {x:0+5,y:1+5,z:1}], pinturaAzul),
-
-        new polygon([{x:0+10,y:1+10,z:0}, {x:1+10,y:1+10,z:0}, {x:1+10,y:0+10,z:0}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:0}, {x:0+10,y:1+10,z:0}, {x:1+10,y:0+10,z:0}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:0}, {x:0+10,y:0+10,z:1}, {x:1+10,y:0+10,z:0}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:1}, {x:1+10,y:0+10,z:1}, {x:1+10,y:0+10,z:0}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:0}, {x:0+10,y:1+10,z:0}, {x:0+10,y:0+10,z:1}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:1}, {x:0+10,y:1+10,z:0}, {x:0+10,y:1+10,z:1}], pinturaVerde),
-        new polygon([{x:0+10,y:1+10,z:1}, {x:0+10,y:1+10,z:0}, {x:1+10,y:1+10,z:0}], pinturaVerde),
-        new polygon([{x:1+10,y:1+10,z:0}, {x:1+10,y:1+10,z:1}, {x:0+10,y:1+10,z:1}], pinturaVerde),
-        new polygon([{x:1+10,y:0+10,z:0}, {x:1+10,y:1+10,z:0}, {x:1+10,y:0+10,z:1}], pinturaVerde),
-        new polygon([{x:1+10,y:0+10,z:1}, {x:1+10,y:1+10,z:1}, {x:1+10,y:1+10,z:0}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:1}, {x:1+10,y:0+10,z:1}, {x:1+10,y:1+10,z:1}], pinturaVerde),
-        new polygon([{x:0+10,y:0+10,z:1}, {x:1+10,y:1+10,z:1}, {x:0+10,y:1+10,z:1}], pinturaVerde),
-
-        new polygon([{x:-20,y:40,z:0}, {x:40,y:40,z:0}, {x:40,y:-20,z:0}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:0}, {x:-20,y:40,z:0}, {x:40,y:-20,z:0}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:0}, {x:-20,y:-20,z:40}, {x:40,y:-20,z:0}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:40}, {x:40,y:-20,z:40}, {x:40,y:-20,z:0}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:0}, {x:-20,y:40,z:0}, {x:-20,y:-20,z:40}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:40}, {x:-20,y:40,z:0}, {x:-20,y:40,z:40}], pinturaBlanca),
-        new polygon([{x:-20,y:40,z:40}, {x:-20,y:40,z:0}, {x:40,y:40,z:0}], pinturaBlanca),
-        new polygon([{x:40,y:40,z:0}, {x:40,y:40,z:40}, {x:-20,y:40,z:40}], pinturaBlanca),
-        new polygon([{x:40,y:-20,z:0}, {x:40,y:40,z:0}, {x:40,y:-20,z:40}], pinturaBlanca),
-        new polygon([{x:40,y:-20,z:40}, {x:40,y:40,z:40}, {x:40,y:40,z:0}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:40}, {x:40,y:-20,z:40}, {x:40,y:40,z:40}], pinturaBlanca),
-        new polygon([{x:-20,y:-20,z:40}, {x:40,y:40,z:40}, {x:-20,y:40,z:40}], pinturaBlanca)
-    ]
-    let lights = [
-        new light({x:15,y:15,z:5}, new Vector(1,0,0), 90, 1, { r:0, g:0, b:255 }),
-        new light({x:0,y:15,z:5}, new Vector(1,0,0), 90, 1, { r:255, g:0, b:0 })
-    ]
     
     context.clearRect(0, 0, canvasWidth, canvasHeight)
     let canvasData = context.getImageData(0, 0, canvasWidth, canvasHeight)
@@ -551,11 +490,14 @@ function render() {
             x = scale * imageAspectRatio * ((-options.width/2) + i) / options.width
             y = scale * ((-options.height/2) + j) / options.height
             dir = cameraToWorld.multDirMatrix(new Vector(x, y, 1))
-            pix.push({ x: x, y:y, ray: new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0.2, { r:255, g:255, b:255 }) })
+            pix.push({ x: x, y:y, ray: new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0, { r:255, g:255, b:255 }) })
         }
     }
 
     pix.forEach( ( pixel, index ) => {
+        //if(index != 68250) return
+        //if(index != 68180) return
+        //if(index != 81000) return
         hitRays = []
         dist = infinite
         polygons.forEach((poli) => {
@@ -572,23 +514,29 @@ function render() {
         })
 
         hitRays.push(pixel.ray)
-//REVISAR DESDE ACA
+
         lights.forEach((light) => {
+            if(light.intensity == 0) return
             tempDist = infinite
-            dir = light.origin().subtract(closestCamRay.point)
+            interference = false
+            dir = closestCamRay.point.subtract(light.origin())
             tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, (light.intensity), light.color)
             polygons.forEach((poliB) =>{
                 lightRay = poliB.intersect(tempRay)
                 if(lightRay == false) return
                 if(lightRay.distance > tempDist) return
-
                 tempDist = lightRay.distance
-                closestPoliB = poliB
                 closestLightRay = lightRay
 
             })
+            if(Math.abs(closestCamRay.point.length() - closestLightRay.point.length()) > (kEpsilon / 4)) interference = true
+            /*console.log(closestCamRay.point.length())
+            console.log(tempRay)
+            console.log(closestPoliB)
+            console.log(closestLightRay.point.length())
+            console.log(interference)*/
 
-            hitRays.push(tempRay)
+            if (interference == false) hitRays.push(tempRay)
 
         })
 //HASTA ACA
