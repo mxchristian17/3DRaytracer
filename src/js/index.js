@@ -429,15 +429,22 @@ class Material {
 }
 
 class light {
-    constructor(orig, direction, angle, intensity, color) {
+    constructor(orig, direction, angle, intensity, color, dimmingStart, dimmingEnd) {
         this.orig = orig
         this.direction = direction
         this.angle = angle
         this. intensity = intensity
         this.color = color
+        this.dimmingStart = dimmingStart
+        this.dimmingEnd = dimmingEnd
     }
 
     origin() { return new Vector(this.orig.x,this.orig.y,this.orig.z) }
+    bright(distance) {
+        if(distance < this.dimmingStart) return this.intensity
+        if(distance > this.dimmingEnd) return 0
+        return this.intensity * (this.dimmingEnd - distance) / (this.dimmingEnd - this.dimmingStart)
+    }
 }
 
 const camera = {
@@ -520,7 +527,7 @@ function render(polygons, lights) {
             tempDist = infinite
             interference = false
             dir = closestCamRay.point.subtract(light.origin())
-            tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, (light.intensity), light.color)
+            tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, light.intensity, light.color)
             polygons.forEach((poliB) =>{
                 lightRay = poliB.intersect(tempRay)
                 if(lightRay == false) return
@@ -536,7 +543,11 @@ function render(polygons, lights) {
             console.log(closestLightRay.point.length())
             console.log(interference)*/
 
-            if (interference == false) hitRays.push(tempRay)
+            if (interference == false) {
+                //console.log(light)
+                tempRay.intensity = light.bright(tempDist)
+                hitRays.push(tempRay)
+            }
 
         })
 //HASTA ACA
