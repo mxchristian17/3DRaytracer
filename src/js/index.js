@@ -4,7 +4,7 @@ let canvasWidth = 400//window.innerWidth
 let canvasHeight = 300//window.innerHeight
 canvas.width = canvasWidth
 canvas.height = canvasHeight
-const context = canvas.getContext("2d") // create context
+const context = canvas.getContext("2d", {willReadFrequently: true}) // create context
 
 /*const acos = (x) => {
         return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966
@@ -114,6 +114,9 @@ class ray {
     origin() { return new Vector(this.orig.x,this.orig.y,this.orig.z) }
     direction() { return this.dir }
     at(t) { return this.orig + t * this.dir }
+    distance(point) {
+        return this.origin().subtract(point).length()
+    }
 
 }
 
@@ -121,6 +124,24 @@ class polygon {
     constructor(points, material) {
         this.points = points
         this.material = material
+        this.v0 = new Vector(this.points[0].x, this.points[0].y, this.points[0].z)
+        this.v1 = new Vector(this.points[1].x, this.points[1].y, this.points[1].z)
+        this.v2 = new Vector(this.points[2].x, this.points[2].y, this.points[2].z)
+        this.edge0 = new Vector(
+            this.points[1].x - this.points[0].x,
+            this.points[1].y - this.points[0].y,
+            this.points[1].z - this.points[0].z
+        )
+        this.edge1 = new Vector(
+            this.points[2].x - this.points[1].x,
+            this.points[2].y - this.points[1].y,
+            this.points[2].z - this.points[1].z
+        )
+        this.edge2 = new Vector(
+            this.points[0].x - this.points[2].x,
+            this.points[0].y - this.points[2].y,
+            this.points[0].z - this.points[2].z
+        )
     }
 
     middle () {
@@ -147,43 +168,28 @@ class polygon {
     intersect (ray) {
         const normal = this.normal()
         const NdotRayDirection = normal.dotProduct(ray.direction())
-        const v0 = new Vector(this.points[0].x, this.points[0].y, this.points[0].z)
+        //const v0 = new Vector(this.points[0].x, this.points[0].y, this.points[0].z)
         if (Math.abs(NdotRayDirection) < kEpsilon ) { /*console.log("The ray is parallel");*/ return false; } // Ray is parallel to the polygon, they don´t intersect
-        const d = -normal.dotProduct(v0)
+        const d = -normal.dotProduct(this.v0)
         const t = -(normal.dotProduct(ray.origin()) + d) / NdotRayDirection;
         if (t < 0) { /*console.log("Triangle is behind");*/ return false; }  //the triangle is behind
         const P = ray.origin().add(ray.direction().scaleBy(t)) // Intersection point to the triangle
-
-        const edge0 = new Vector(
-            this.points[1].x - this.points[0].x,
-            this.points[1].y - this.points[0].y,
-            this.points[1].z - this.points[0].z
-        )
-        const vp0 = P.subtract(v0)
-        let C = edge0.crossProduct(vp0)
+ 
+        const vp0 = P.subtract(this.v0)
+        let C = this.edge0.crossProduct(vp0)
         if(normal.dotProduct(C) > 0) { /*console.log("Ray out of triangle. Edge0");*/ return false; } //P is outside the polygon
 
-        const edge1 = new Vector(
-            this.points[2].x - this.points[1].x,
-            this.points[2].y - this.points[1].y,
-            this.points[2].z - this.points[1].z
-        )
-        const vp1 = P.subtract(new Vector(this.points[1].x, this.points[1].y, this.points[1].z))
-        C = edge1.crossProduct(vp1)
+        const vp1 = P.subtract(this.v1)
+        C = this.edge1.crossProduct(vp1)
         if(normal.dotProduct(C) > 0) { /*console.log("Ray out of triangle. Edge1");*/ return false; } //P is outside the polygon
 
-        const edge2 = new Vector(
-            this.points[0].x - this.points[2].x,
-            this.points[0].y - this.points[2].y,
-            this.points[0].z - this.points[2].z
-        )
-        const vp2 = P.subtract(new Vector(this.points[2].x, this.points[2].y, this.points[2].z))
-        C = edge2.crossProduct(vp2)
+        const vp2 = P.subtract(this.v2)
+        C = this.edge2.crossProduct(vp2)
         if(normal.dotProduct(C) > 0) { /*console.log("Ray out of triangle. Edge2");*/ return false; } //P is outside the polygon
 
-        const distance = ray.origin().subtract(P).length() // P are coordinates of the intersection point
+        //const distance = ray.origin().subtract(P).length() // P are coordinates of the intersection point
 
-        return { distance: distance, point: P } //This ray hits the triangle
+        return { point: P } //This ray hits the triangle
     }
 
     color (rays) {
@@ -429,10 +435,11 @@ class Material {
 }
 
 class light {
-    constructor(orig, direction, angle, intensity, color, dimmingStart, dimmingEnd) {
+    constructor(orig, direction, minAngle, maxAngle, intensity, color, dimmingStart, dimmingEnd) {
         this.orig = orig
         this.direction = direction
-        this.angle = angle
+        this.minAngle = minAngle
+        this.maxAngle = maxAngle
         this. intensity = intensity
         this.color = color
         this.dimmingStart = dimmingStart
@@ -440,10 +447,15 @@ class light {
     }
 
     origin() { return new Vector(this.orig.x,this.orig.y,this.orig.z) }
-    bright(distance) {
-        if(distance < this.dimmingStart) return this.intensity
+    bright(distance, angle) {
+        let result
         if(distance > this.dimmingEnd) return 0
-        return this.intensity * (this.dimmingEnd - distance) / (this.dimmingEnd - this.dimmingStart)
+        if(angle > this.maxAngle) return 0
+        if(distance < this.dimmingStart) result = this.intensity
+        if(distance >= this.dimmingStart && distance < this.dimmingEnd) result = this.intensity * (this.dimmingEnd - distance) / (this.dimmingEnd - this.dimmingStart)
+        if(angle < this.minAngle) return result
+        return result * (this.maxAngle - angle) / (this.maxAngle - this.minAngle)
+
     }
 }
 
@@ -481,7 +493,7 @@ function render(polygons, lights) {
     let loadingValue = 0
     const cam = new Camera(camera)
     const cameraToWorld = cam.cameraToWorldSet()
-    let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, n, closestPoli, closestCamRay, closestPoliB, closestLightRay, interference, closestIntersect, opositeTempRay
+    let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, n, closestPoli, closestCamRay, closestPoliB, closestLightRay, interference, closestIntersect, opositeTempRay, rayAngle, currentDistance, tempCurrentDistance
     let pix = []
     let hitRays = []
     
@@ -497,7 +509,7 @@ function render(polygons, lights) {
             x = scale * imageAspectRatio * ((-options.width/2) + i) / options.width
             y = scale * ((-options.height/2) + j) / options.height
             dir = cameraToWorld.multDirMatrix(new Vector(x, y, 1))
-            pix.push({ x: x, y:y, ray: new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0, { r:255, g:255, b:255 }) })
+            pix.push({ x: x, y:y, ray: new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0.2, { r:255, g:255, b:255 }) })
         }
     }
 
@@ -511,9 +523,10 @@ function render(polygons, lights) {
 
             camRay = poli.intersect(pixel.ray)
             if(camRay == false) return
-            if(camRay.distance > dist) return
+            currentDistance = pixel.ray.distance(camRay.point)
+            if(currentDistance > dist) return
 
-            dist = camRay.distance
+            dist = currentDistance
             closestPoli = poli
             closestCamRay = camRay
             return
@@ -527,16 +540,19 @@ function render(polygons, lights) {
             tempDist = infinite
             interference = false
             dir = closestCamRay.point.subtract(light.origin())
+            rayAngle = light.direction.angleBetween(dir)
+            if(rayAngle > light.maxAngle/2) return
             tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, light.intensity, light.color)
             polygons.forEach((poliB) =>{
                 lightRay = poliB.intersect(tempRay)
                 if(lightRay == false) return
-                if(lightRay.distance > tempDist) return
-                tempDist = lightRay.distance
+                tempCurrentDistance = tempRay.distance(lightRay.point)
+                if(tempCurrentDistance > tempDist) return
+                tempDist = tempCurrentDistance
                 closestLightRay = lightRay
 
             })
-            if(Math.abs(closestCamRay.point.length() - closestLightRay.point.length()) > (kEpsilon / 4)) interference = true
+            if(Math.abs(closestCamRay.point.length() - closestLightRay.point.length()) > kEpsilon) interference = true
             /*console.log(closestCamRay.point.length())
             console.log(tempRay)
             console.log(closestPoliB)
@@ -545,12 +561,11 @@ function render(polygons, lights) {
 
             if (interference == false) {
                 //console.log(light)
-                tempRay.intensity = light.bright(tempDist)
+                tempRay.intensity = light.bright(tempDist, 2 * rayAngle)
                 hitRays.push(tempRay)
             }
 
         })
-//HASTA ACA
 
         color = closestPoli.color(hitRays)
         drawPixel(canvasData, canvasWidth, canvasHeight, index, color.r,color.g,color.b,255)

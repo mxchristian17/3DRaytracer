@@ -57,6 +57,6 @@ let polygons = [
     new polygon([{x:-20,y:-20,z:40}, {x:40,y:40,z:40}, {x:-20,y:40,z:40}], pinturaBlanca)
 ]
 let lights = [
-    new light({x:15,y:15,z:5}, new Vector(1,0,0), 90, 1, { r:255, g:0, b:0 }, 1, 2),
-    new light({x:0.5,y:-0.5,z:1.5}, new Vector(1,0,0), 90, 1, { r:255, g:255, b:255 }, 1, 4)
+    new light({x:15,y:15,z:5}, new Vector(1,0,0), 80, 180, 1, { r:255, g:0, b:0 }, 1, 30),
+    new light({x:0.5,y:-0.5,z:1.5}, new Vector(0,0,-1), 120, 180, 1, { r:255, g:255, b:255 }, 1, 30)
 ]
