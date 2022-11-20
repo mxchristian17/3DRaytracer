@@ -169,7 +169,7 @@ class polygon {
         const normal = this.normal()
         const NdotRayDirection = normal.dotProduct(ray.direction())
         //const v0 = new Vector(this.points[0].x, this.points[0].y, this.points[0].z)
-        if (Math.abs(NdotRayDirection) < kEpsilon ) { /*console.log("The ray is parallel");*/ return false; } // Ray is parallel to the polygon, they don´t intersect
+        if ( /*Math.abs*/(NdotRayDirection) < kEpsilon ) { /*console.log("The ray is parallel");*/ return false; } // Ray is parallel to the polygon, they don´t intersect
         const d = -normal.dotProduct(this.v0)
         const t = -(normal.dotProduct(ray.origin()) + d) / NdotRayDirection;
         if (t < 0) { /*console.log("Triangle is behind");*/ return false; }  //the triangle is behind
@@ -464,12 +464,12 @@ const camera = {
     position: {
         x: -4,
         y: -2,
-        z: 1.5
+        z: 3.5
     },
     target: {
         x: 0.5,
         y: 0.5,
-        z: 0.5
+        z: 1.5
     },
     zoom: 1,
     fov: 90,
@@ -509,7 +509,31 @@ function render(polygons, lights) {
             x = scale * imageAspectRatio * ((-options.width/2) + i) / options.width
             y = scale * ((-options.height/2) + j) / options.height
             dir = cameraToWorld.multDirMatrix(new Vector(x, y, 1))
-            pix.push({ x: x, y:y, ray: new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0.2, { r:255, g:255, b:255 }) })
+            tempRay = new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0.2, { r:255, g:255, b:255 })
+
+            dist = infinite
+            closestCamRay = null
+            closestPoli = null
+            polygons.forEach((poli) => {
+
+                camRay = poli.intersect(tempRay)
+                if(camRay == false) return
+                currentDistance = tempRay.distance(camRay.point)
+                if(currentDistance > dist) return
+
+                dist = currentDistance
+                closestPoli = poli
+                closestCamRay = camRay
+                return
+                
+            })
+        
+            if( closestCamRay == undefined ) {
+                pix.push({ ray: false })
+                continue
+            }
+
+            pix.push({ x: x, y:y, ray: tempRay, dist: dist, closestPoli: closestPoli, closestCamRay: closestCamRay })
         }
     }
 
@@ -517,21 +541,14 @@ function render(polygons, lights) {
         //if(index != 68250) return
         //if(index != 68180) return
         //if(index != 81000) return
-        hitRays = []
-        dist = infinite
-        polygons.forEach((poli) => {
-
-            camRay = poli.intersect(pixel.ray)
-            if(camRay == false) return
-            currentDistance = pixel.ray.distance(camRay.point)
-            if(currentDistance > dist) return
-
-            dist = currentDistance
-            closestPoli = poli
-            closestCamRay = camRay
+        if(pixel.ray == false) {
+            drawPixel(canvasData, canvasWidth, canvasHeight, index, 0,0,0,255)
             return
-            
-        })
+        }
+        hitRays = []
+        
+
+        //if (pixel.closestCamRay == undefined) return
 
         hitRays.push(pixel.ray)
 
@@ -539,7 +556,8 @@ function render(polygons, lights) {
             if(light.intensity == 0) return
             tempDist = infinite
             interference = false
-            dir = closestCamRay.point.subtract(light.origin())
+
+            dir = pixel.closestCamRay.point.subtract(light.origin())
             rayAngle = light.direction.angleBetween(dir)
             if(rayAngle > light.maxAngle/2) return
             tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, light.intensity, light.color)
@@ -552,7 +570,8 @@ function render(polygons, lights) {
                 closestLightRay = lightRay
 
             })
-            if(Math.abs(closestCamRay.point.length() - closestLightRay.point.length()) > kEpsilon) interference = true
+            if( closestLightRay == undefined ) return
+            if(Math.abs(pixel.closestCamRay.point.length() - closestLightRay.point.length()) > kEpsilon) interference = true
             /*console.log(closestCamRay.point.length())
             console.log(tempRay)
             console.log(closestPoliB)
@@ -567,9 +586,10 @@ function render(polygons, lights) {
 
         })
 
-        color = closestPoli.color(hitRays)
+        color = pixel.closestPoli.color(hitRays)
         drawPixel(canvasData, canvasWidth, canvasHeight, index, color.r,color.g,color.b,255)
     })
+
     context.putImageData(canvasData, 0, 0)
     
     const endingTime = new Date().getTime()
