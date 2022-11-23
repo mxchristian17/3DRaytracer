@@ -9,9 +9,9 @@
         </style>
 
     </head>
-    <body onresize="render(polygons, lights)" onload="render(polygons, lights)">
+    <body onresize="render(objects, lights)" onload="render(objects, lights)">
         <div id="loading">Loading...</div>
-        <canvas
+        <!--<canvas
             id="canvas"
             width="1000"
             height="500"
@@ -20,15 +20,21 @@
             onMouseMove = "pivoting(event)"
             onMouseUp = "endPivot(event)"
         >
+        </canvas>-->
+        <canvas
+            id="canvas"
+            width="1000"
+            height="500"
+        >
         </canvas>
+        <!--<input type="file" name="file" id="file">-->
 
-        <input type="file" name="file" id="file">
-
-        <script src="src/js/3dMath.js"></script>
-        <script src="src/js/index.js"></script>
-        <script src="src/js/rayTracer.js"></script>
-        <script src="src/js/scene.js"></script>
-        <script type="text/javascript">
+        <script type="text/javascript" src="src/js/3dMath.js"></script>
+        <script type="text/javascript" src="src/js/index.js"></script>
+        <script type="text/javascript" src="src/js/standardObjects.js"></script>
+        <script type="text/javascript" src="src/js/scene.js"></script>
+        <script defer type="text/javascript" src="src/js/rayTracer.js"></script>
+        <!--<script type="text/javascript">
             document.getElementById('file').onchange = function(){
 
             var file = this.files[0];
@@ -52,6 +58,6 @@
             };
             reader.readAsText(file);
             };
-        </script>
+        </script>-->
     </body>
 </html>

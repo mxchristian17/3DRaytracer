@@ -6,6 +6,8 @@ canvas.width = canvasWidth
 canvas.height = canvasHeight
 const context = canvas.getContext("2d", {willReadFrequently: true}) // create context
 
+var loadingValue = 0
+
 /*const acos = (x) => {
         return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966
 }*/
@@ -33,19 +35,22 @@ class Vector {
         return new Vector(...this.components)
     }
     add({ components }) {
-        return new Vector(
+        return new Vector (this.components[0]+components[0], this.components[1]+components[1], this.components[2]+components[2])
+        /*return new Vector(
         ...components.map((component, index) => this.components[index] + component)
-        )
+        )*/
     }
     subtract({ components }) {
-        return new Vector(
+        return new Vector (this.components[0]-components[0], this.components[1]-components[1], this.components[2]-components[2])
+        /*return new Vector(
         ...components.map((component, index) => this.components[index] - component)
-        )
+        )*/
     }
     scaleBy(number) {
-        return new Vector(
+        return new Vector (this.components[0]*number, this.components[1]*number, this.components[2]*number)
+        /*return new Vector(
             ...this.components.map(component => component * number)
-        )
+        )*/
     }
     length() {
         return Math.hypot(...this.components)
@@ -54,7 +59,8 @@ class Vector {
         return (Math.pow(this.x(), 2) + Math.pow(this.y(), 2) + Math.pow(this.z(), 2))
     }
     dotProduct({ components }) {
-        return components.reduce((acc, component, index) => acc + component * this.components[index], 0)
+        return (this.components[0]*components[0]+this.components[1]*components[1]+this.components[2]*components[2])
+        //return components.reduce((acc, component, index) => acc + component * this.components[index], 0)
     }
     normalize() {
         return this.scaleBy(1 / this.length())
@@ -152,7 +158,7 @@ class polygon {
     }
 
     normal () {
-        let r = new Vector(
+        /*let r = new Vector(
             this.points[1].x - this.points[0].x,
             this.points[1].y - this.points[0].y,
             this.points[1].z - this.points[0].z
@@ -162,7 +168,11 @@ class polygon {
             this.points[2].y - this.points[1].y,
             this.points[2].z - this.points[1].z
         )
-        return s.crossProduct(r)
+        return s.crossProduct(r)*/
+        const x = this.edge1.components[1] * this.edge0.components[2] - this.edge1.components[2] * this.edge0.components[1]
+        const y = this.edge1.components[2] * this.edge0.components[0] - this.edge1.components[0] * this.edge0.components[2]
+        const z = this.edge1.components[0] * this.edge0.components[1] - this.edge1.components[1] * this.edge0.components[0]
+        return (new Vector(x,y,z))
     }
 
     intersect (ray) {
@@ -218,7 +228,7 @@ class Object {
     }
 
     polygons () { return this.polygons }
-
+    material () { return this.material }
 }
 
 class Matrix44 {
@@ -459,23 +469,6 @@ class light {
     }
 }
 
-const camera = {
-
-    position: {
-        x: -4,
-        y: -2,
-        z: 3.5
-    },
-    target: {
-        x: 0.5,
-        y: 0.5,
-        z: 1.5
-    },
-    zoom: 1,
-    fov: 90,
-    
-}
-
 const drawPixel = (canvasData, canvasWidth, canvasHeight, pixel, r,g,b,a) => {
     let index = pixel * 4;
 
@@ -487,126 +480,7 @@ const drawPixel = (canvasData, canvasWidth, canvasHeight, pixel, r,g,b,a) => {
 
 loading.style.display = "block"
 //canvas.style.display = "none"
-function render(polygons, lights) {
-    const startingTime = new Date().getTime();
-    let showLoading = true
-    let loadingValue = 0
-    const cam = new Camera(camera)
-    const cameraToWorld = cam.cameraToWorldSet()
-    let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, n, closestPoli, closestCamRay, closestPoliB, closestLightRay, interference, closestIntersect, opositeTempRay, rayAngle, currentDistance, tempCurrentDistance
-    let pix = []
-    let hitRays = []
-    
-    context.clearRect(0, 0, canvasWidth, canvasHeight)
-    let canvasData = context.getImageData(0, 0, canvasWidth, canvasHeight)
 
-    const scale = Math.tan(degreeToRad(cam.fov)*0.5)
-    const imageAspectRatio = options.width / options.height;
-    const orig = cam.origin()
-    
-    for(let j = options.height; j > 0; j--) {
-        for (let i = 0; i < options.width; i++) {
-            x = scale * imageAspectRatio * ((-options.width/2) + i) / options.width
-            y = scale * ((-options.height/2) + j) / options.height
-            dir = cameraToWorld.multDirMatrix(new Vector(x, y, 1))
-            tempRay = new ray({x: orig.x(), y: orig.y(), z: orig.z()}, dir, 0.2, { r:255, g:255, b:255 })
-
-            dist = infinite
-            closestCamRay = null
-            closestPoli = null
-            polygons.forEach((poli) => {
-
-                camRay = poli.intersect(tempRay)
-                if(camRay == false) return
-                currentDistance = tempRay.distance(camRay.point)
-                if(currentDistance > dist) return
-
-                dist = currentDistance
-                closestPoli = poli
-                closestCamRay = camRay
-                return
-                
-            })
-        
-            if( closestCamRay == undefined ) {
-                pix.push({ ray: false })
-                continue
-            }
-
-            pix.push({ x: x, y:y, ray: tempRay, dist: dist, closestPoli: closestPoli, closestCamRay: closestCamRay })
-        }
-    }
-
-    pix.forEach( ( pixel, index ) => {
-        //if(index != 68250) return
-        //if(index != 68180) return
-        //if(index != 81000) return
-        if(pixel.ray == false) {
-            drawPixel(canvasData, canvasWidth, canvasHeight, index, 0,0,0,255)
-            return
-        }
-        hitRays = []
-        
-
-        //if (pixel.closestCamRay == undefined) return
-
-        hitRays.push(pixel.ray)
-
-        lights.forEach((light) => {
-            if(light.intensity == 0) return
-            tempDist = infinite
-            interference = false
-
-            dir = pixel.closestCamRay.point.subtract(light.origin())
-            rayAngle = light.direction.angleBetween(dir)
-            if(rayAngle > light.maxAngle/2) return
-            tempRay = new ray({x: light.orig.x, y: light.orig.y, z: light.orig.z}, dir, light.intensity, light.color)
-            polygons.forEach((poliB) =>{
-                lightRay = poliB.intersect(tempRay)
-                if(lightRay == false) return
-                tempCurrentDistance = tempRay.distance(lightRay.point)
-                if(tempCurrentDistance > tempDist) return
-                tempDist = tempCurrentDistance
-                closestLightRay = lightRay
-
-            })
-            if( closestLightRay == undefined ) return
-            if(Math.abs(pixel.closestCamRay.point.length() - closestLightRay.point.length()) > kEpsilon) interference = true
-            /*console.log(closestCamRay.point.length())
-            console.log(tempRay)
-            console.log(closestPoliB)
-            console.log(closestLightRay.point.length())
-            console.log(interference)*/
-
-            if (interference == false) {
-                //console.log(light)
-                tempRay.intensity = light.bright(tempDist, 2 * rayAngle)
-                hitRays.push(tempRay)
-            }
-
-        })
-
-        color = pixel.closestPoli.color(hitRays)
-        drawPixel(canvasData, canvasWidth, canvasHeight, index, color.r,color.g,color.b,255)
-    })
-
-    context.putImageData(canvasData, 0, 0)
-    
-    const endingTime = new Date().getTime()
-    canvas.style.display = "block"
-    loading.style.display = "none"
-    
-    //Print render data
-    const elapsedTime = (endingTime-startingTime) / 1000
-    context.beginPath();
-    context.fillStyle = "rgb(0,0,0,0.8)"
-    context.fillRect(0, (options.height-20), options.width, options.height);
-    context.stroke();
-    context.font = "11px Arial";
-    context.fillStyle = "#FFFFFF"
-    context.fillText("Render time: " + elapsedTime + " sg | Poligons: " + polygons.length + " | Orengia Christian Raytracer", 5, options.height-5)
-
-}
 
 /*let acos = []
 for(i = 0; i <= 2000; i++) {
