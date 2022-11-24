@@ -141,13 +141,16 @@ const renderBox = (context, camera ,objects, lights, xStart, yStart, boxSize, sc
 
 function render(objects, lights) {
     const startingTime = new Date().getTime();
+    let checkPoint = startingTime
     const cam = new Camera(camera)
     const cameraToWorld = cam.cameraToWorldSet()
     let x,y, dir, color, dist, camRay, lightRay, tempRay, tempDist, closestPoli, closestCamRay, closestLightRay, interference, rayAngle, currentDistance, tempCurrentDistance
     let polygonsCount = 0
     let pix = []
     let hitRays = []
-    
+    const pixelUpdateTimeDivision = options.height / 50
+    const pixelUpdateTimeDivisionB = pixelCount / 50
+
     context.clearRect(0, 0, canvasWidth, canvasHeight)
     let canvasData = context.getImageData(0, 0, canvasWidth, canvasHeight)
 
@@ -186,16 +189,23 @@ function render(objects, lights) {
 
             pix.push({ x: x, y:y, ray: tempRay, dist: dist, closestPoli: closestPoli, closestCamRay: closestCamRay })
         }
-        if(j % 5 === 0) {
+        if(options.consoleTimes) if(j % pixelUpdateTimeDivision === 0) {
             loadingValue = 100 * (((options.height-j)) / options.height)
             console.clear()
-            console.log("Trazando rayos de camara " + Math.floor(loadingValue) + "%")
+            console.log("Trazando rayos de camara " + Math.floor(loadingValue) + "% " + ((new Date().getTime()-checkPoint) / 1000) + "sg")
             //console.log(loadingValue)
         }
     }
     loadingValue=0
     const pixLength = pix.length
     let pixPos = 0
+    
+    const camRaysTraceTime = ((new Date().getTime()-checkPoint) / 1000)
+
+    if(options.consoleTimes) {
+        checkPoint = new Date().getTime()
+    }
+
     pix.forEach( ( pixel, index ) => {
         pixPos++
         //if(index != 68250) return
@@ -250,13 +260,19 @@ function render(objects, lights) {
         color = pixel.closestPoli.color(hitRays)
         drawPixel(canvasData, canvasWidth, canvasHeight, index, color.r,color.g,color.b,255)
 
-        if(pixPos % 1000 === 0) {
+        if(options.consoleTimes) if(pixPos % pixelUpdateTimeDivisionB === 0) {
             loadingValue = 100 * pixPos / pixLength
             console.clear()
-            console.log("Rayos de camara trazados 100%")
-            console.log("Trazando rayos de luces " + Math.floor(loadingValue) + "%")
+            console.log("Rayos de camara trazados 100% " + camRaysTraceTime + "sg")
+            console.log("Trazando rayos de luces " + Math.floor(loadingValue) + "% " + ((new Date().getTime()-checkPoint) / 1000) + "sg")
         }
     })
+
+    if(options.consoleTimes) {
+        console.clear()
+        console.log("Rayos de camara trazados 100% " + camRaysTraceTime + "sg")
+        console.log("Rayos de luces trazados 100% " + ((new Date().getTime()-checkPoint) / 1000) + "sg")
+    }
 
     context.putImageData(canvasData, 0, 0)
     
@@ -266,13 +282,15 @@ function render(objects, lights) {
     
     //Print render data
     const elapsedTime = (endingTime-startingTime) / 1000
-    objects.forEach((object) => {object.polygons.forEach((poli) => {polygonsCount++})})
-    context.beginPath();
-    context.fillStyle = "rgb(0,0,0,0.8)"
-    context.fillRect(0, (options.height-20), options.width, options.height);
-    context.stroke();
-    context.font = "11px Arial";
-    context.fillStyle = "#FFFFFF"
-    context.fillText("Render time: " + elapsedTime + " sg | Polygons: " + polygonsCount + " | Orengia Christian Raytracer", 5, options.height-5)
+    if(options.showRenderData) {
+        objects.forEach((object) => {object.polygons.forEach((poli) => {polygonsCount++})})
+        context.beginPath();
+        context.fillStyle = "rgb(0,0,0,0.8)"
+        context.fillRect(0, (options.height-20), options.width, options.height);
+        context.stroke();
+        context.font = "11px Arial";
+        context.fillStyle = "#FFFFFF"
+        context.fillText("Render: " + elapsedTime + " sg | Polygons: " + polygonsCount + " | " + options.width + "x" + options.height + "px" + " | Orengia Christian Raytracer", 5, options.height-5)
+    }
 
 }

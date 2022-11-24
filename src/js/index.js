@@ -2,6 +2,7 @@ const canvas = document.getElementById("canvas")
 const loading = document.getElementById("loading")
 let canvasWidth = 400//window.innerWidth
 let canvasHeight = 300//window.innerHeight
+const pixelCount = canvasWidth * canvasHeight
 canvas.width = canvasWidth
 canvas.height = canvasHeight
 const context = canvas.getContext("2d", {willReadFrequently: true}) // create context
@@ -15,7 +16,10 @@ var loadingValue = 0
 
 const options = {
     width: canvasWidth,
-    height: canvasHeight
+    height: canvasHeight,
+    consoleTimes: true,
+    showRenderData: true,
+    globalIllumination: true
 }
 
 const kEpsilon = 0.00001; // value to be considered 0 at paralellism evaluation
